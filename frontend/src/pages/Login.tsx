@@ -46,7 +46,7 @@ export default function LoginPage() {
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="text-2xl">CASI</CardTitle>
             <CardDescription>
-              Cooperativa Agrícola San Isabel
+              Cooperativa Agrícola San Isidro
             </CardDescription>
           </CardHeader>
           <CardContent>

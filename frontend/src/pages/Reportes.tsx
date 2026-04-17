@@ -47,7 +47,7 @@ export default function ReportesPage() {
         cosechaService.getAll({ limit: 100 }),
       ])
       setMetrics(metricsRes.data)
-      setCosechas(cosechasRes.data as unknown as Cosecha[])
+      setCosechas(cosechasRes.data)
     } catch (error) {
       console.error("Error fetching data:", error)
     } finally {

@@ -80,9 +80,10 @@ export default function ControlCalidadPage() {
         frutaService.getAll(),
         socioService.getAll(),
       ])
-      setFrutas(frutasRes.data as unknown as FrutaControl[])
-      setSocios(sociosRes.data as unknown as Socio[])
-    } catch {
+      setFrutas(frutasRes.data)
+      setSocios(sociosRes.data)
+    } catch (error) {
+      console.error("Error fetching data:", error)
       toast({ title: "Error al cargar datos", type: "error" })
     } finally {
       setIsLoading(false)
@@ -90,13 +91,29 @@ export default function ControlCalidadPage() {
   }
 
   const onSubmit = async (data: CreateFrutaFormData) => {
+    console.log("onSubmit called with:", data, selectedSocioId)
     try {
-      await frutaService.create(data)
+      if (!selectedSocioId) {
+        toast({ title: "Seleccione un socio", type: "warning" })
+        return
+      }
+      await frutaService.create({
+        socioId: selectedSocioId,
+        especie: data.especie,
+        variedad: data.variedad || undefined,
+        calibre: data.calibre,
+        azucar: Number(data.azucar),
+        dureza: Number(data.dureza),
+        defectos: Number(data.defectos),
+        observaciones: data.observaciones || undefined,
+      })
       toast({ title: "Control de calidad registrado", type: "success" })
       setIsDialogOpen(false)
       reset()
+      setSelectedSocioId("")
       fetchData()
-    } catch {
+    } catch (error) {
+      console.error("Error saving:", error)
       toast({ title: "Error al guardar", type: "error" })
     }
   }
@@ -278,7 +295,10 @@ export default function ControlCalidadPage() {
           <DialogHeader>
             <DialogTitle>Registro de Control APPCC</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit((data) => {
+              console.log("ControlCalidad - Form submitted:", data, "socio:", selectedSocioId)
+              onSubmit(data)
+            })} className="space-y-4">
             <div className="space-y-2">
               <Label>Socio *</Label>
               <Select onValueChange={(v) => reset({ socioId: v } as CreateFrutaFormData)}>

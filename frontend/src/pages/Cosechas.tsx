@@ -34,7 +34,7 @@ import { cosechaService, parcelaService, socioService } from "@/services/api"
 import { useToast } from "@/hooks/useToast"
 import { createCosechaSchema, type CreateCosechaFormData } from "@/schemas"
 import { formatDate, formatNumber } from "@/lib/utils"
-import { Plus, Search, TrendingUp } from "lucide-react"
+import { Plus, Search, TrendingUp, Edit, Trash2 } from "lucide-react"
 import type { Cosecha, Parcela, Socio } from "@/types"
 
 export default function CosechasPage() {
@@ -44,6 +44,7 @@ export default function CosechasPage() {
   const [socios, setSocios] = useState<Socio[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingCosecha, setEditingCosecha] = useState<Cosecha | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedSocioId, setSelectedSocioId] = useState<string>("")
 
@@ -64,54 +65,90 @@ export default function CosechasPage() {
     fetchData()
   }, [])
 
-  useEffect(() => {
-    if (parcelas.length > 0) {
-      setValue("parcelaId", parcelas[0].id)
-    }
-  }, [parcelas, setValue])
-
   const fetchData = async () => {
     try {
-      const [cosechasRes, sociosRes] = await Promise.all([
+      const [cosechasRes, parcelasRes, sociosRes] = await Promise.all([
         cosechaService.getAll(),
+        parcelaService.getAll(),
         socioService.getAll(),
       ])
-      setCosechas(cosechasRes.data as unknown as Cosecha[])
-      setSocios(sociosRes.data as unknown as Socio[])
+      setCosechas(cosechasRes.data)
+      setParcelas(parcelasRes.data)
+      setSocios(sociosRes.data)
       
-      if (sociosRes.data && (sociosRes.data as unknown as Socio[]).length > 0) {
-        const firstSocio = (sociosRes.data as unknown as Socio[])[0]
-        setSelectedSocioId(firstSocio.id)
-        const parcelasRes = await parcelaService.getBySocio(firstSocio.id)
-        setParcelas(parcelasRes.data)
+      if (parcelasRes.data.length > 0) {
+        setSelectedSocioId(parcelasRes.data[0].socioId)
       }
     } catch (error) {
+      console.error("Error fetching data:", error)
       toast({ title: "Error al cargar datos", type: "error" })
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleSocioChange = async (socioId: string) => {
-    setSelectedSocioId(socioId)
+  const onSubmit = async (data: CreateCosechaFormData) => {
+    console.log("onSubmit called with:", data, "parcelaId:", parcelaId)
     try {
-      const parcelasRes = await parcelaService.getBySocio(socioId)
-      setParcelas(parcelasRes.data)
-    } catch {
-      setParcelas([])
+      if (!parcelaId) {
+        toast({ title: "Seleccione una parcela", type: "warning" })
+        return
+      }
+      
+      const cultivoValue = data.cultivo as "MAIZ" | "TRIGO" | "CEBADA"
+      
+      const payload = {
+        parcelaId: parcelaId,
+        cultivo: cultivoValue,
+        rendimiento: data.rendimiento ? Number(data.rendimiento) : undefined,
+        fechaSiembra: data.fechaSiembra || undefined,
+        fechaCosecha: data.fechaCosecha || undefined,
+      }
+      
+      console.log("Payload to send:", payload)
+
+      if (editingCosecha) {
+        await cosechaService.update(editingCosecha.id, payload)
+        toast({ title: "Cosecha actualizada", type: "success" })
+      } else {
+        await cosechaService.create(payload)
+        toast({ title: "Cosecha registrada", type: "success" })
+      }
+      setIsDialogOpen(false)
+      reset()
+      setEditingCosecha(null)
+      fetchData()
+    } catch (error) {
+      console.error("Error saving cosecha:", error)
+      toast({ title: "Error al guardar", type: "error" })
     }
   }
 
-  const onSubmit = async (data: CreateCosechaFormData) => {
+  const handleEdit = (cosecha: Cosecha) => {
+    setEditingCosecha(cosecha)
+    setValue("parcelaId", cosecha.parcelaId)
+    setValue("cultivo", cosecha.cultivo)
+    setValue("rendimiento", cosecha.rendimiento)
+    if (cosecha.fechaSiembra) setValue("fechaSiembra", cosecha.fechaSiembra.split('T')[0])
+    if (cosecha.fechaCosecha) setValue("fechaCosecha", cosecha.fechaCosecha.split('T')[0])
+    setIsDialogOpen(true)
+  }
+
+  const handleDelete = async (cosecha: Cosecha) => {
+    if (!confirm(`¿Eliminar la cosecha de ${cosecha.parcela?.nombre}?`)) return
     try {
-      await cosechaService.create(data)
-      toast({ title: "Cosecha registrada", type: "success" })
-      setIsDialogOpen(false)
-      reset()
+      await cosechaService.delete(cosecha.id)
+      toast({ title: "Cosecha eliminada", type: "success" })
       fetchData()
-    } catch {
-      toast({ title: "Error al guardar", type: "error" })
+    } catch (error) {
+      console.error("Error deleting cosecha:", error)
+      toast({ title: "No se puede eliminar", type: "error" })
     }
+  }
+
+  const getSocioNombre = (socioId: string) => {
+    const socio = socios.find(s => s.id === socioId)
+    return socio ? `${socio.numeroSocio} - ${socio.nombre}` : socioId.slice(0, 8)
   }
 
   const filteredCosechas = cosechas.filter((cosecha) =>
@@ -140,7 +177,7 @@ export default function CosechasPage() {
               className="pl-9"
             />
           </div>
-          <Button onClick={() => { reset(); setIsDialogOpen(true) }}>
+          <Button onClick={() => { reset(); setEditingCosecha(null); setIsDialogOpen(true) }}>
             <Plus className="h-4 w-4 mr-2" />
             Nueva Cosecha
           </Button>
@@ -184,12 +221,13 @@ export default function CosechasPage() {
                     <TableHead>Rendimiento (kg/ha)</TableHead>
                     <TableHead>Fecha Siembra</TableHead>
                     <TableHead>Fecha Cosecha</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredCosechas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         No hay cosechas registradas
                       </TableCell>
                     </TableRow>
@@ -199,7 +237,11 @@ export default function CosechasPage() {
                         <TableCell className="font-medium">
                           {cosecha.parcela?.nombre || "-"}
                         </TableCell>
-                        <TableCell>{cosecha.parcela?.socioId || "-"}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {cosecha.parcela?.socioId ? getSocioNombre(cosecha.parcela.socioId) : "-"}
+                          </Badge>
+                        </TableCell>
                         <TableCell>
                           <Badge className={cultivoColors[cosecha.cultivo]}>
                             {cosecha.cultivo}
@@ -215,6 +257,21 @@ export default function CosechasPage() {
                         <TableCell>
                           {cosecha.fechaCosecha ? formatDate(cosecha.fechaCosecha) : "-"}
                         </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(cosecha)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => handleDelete(cosecha)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -228,47 +285,42 @@ export default function CosechasPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nueva Cosecha</DialogTitle>
+            <DialogTitle>
+              {editingCosecha ? "Editar Cosecha" : "Nueva Cosecha"}
+            </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Socio</Label>
-              <Select value={selectedSocioId} onValueChange={handleSocioChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar socio" />
-                </SelectTrigger>
-                <SelectContent>
-                  {socios.map((socio) => (
-                    <SelectItem key={socio.id} value={socio.id}>
-                      {socio.numeroSocio} - {socio.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
+          <form onSubmit={handleSubmit((data) => {
+              console.log("Cosechas - Form submitted:", data)
+              onSubmit(data)
+            })} className="space-y-4">
             <div className="space-y-2">
               <Label>Parcela *</Label>
-              <Select value={parcelaId} onValueChange={(v) => setValue("parcelaId", v)}>
+              <Select 
+                value={parcelaId || ""} 
+                onValueChange={(v) => setValue("parcelaId", v, { shouldValidate: true })}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar parcela" />
                 </SelectTrigger>
                 <SelectContent>
                   {parcelas.map((parcela) => (
                     <SelectItem key={parcela.id} value={parcela.id}>
-                      {parcela.nombre} ({parcela.hectareas} ha)
+                      {parcela.nombre} ({parcela.hectareas} ha) - {getSocioNombre(parcela.socioId)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {errors.parcelaId && (
-                <p className="text-sm text-destructive">{errors.parcelaId.message}</p>
+              {parcelaId ? null : (
+                <p className="text-sm text-destructive">Seleccione una parcela</p>
               )}
             </div>
 
             <div className="space-y-2">
               <Label>Tipo de Cultivo *</Label>
-              <Select onValueChange={(v) => setValue("cultivo", v as "MAIZ" | "TRIGO" | "CEBADA")}>
+              <Select 
+                onValueChange={(v) => setValue("cultivo", v as "MAIZ" | "TRIGO" | "CEBADA")}
+                defaultValue={editingCosecha?.cultivo}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar cultivo" />
                 </SelectTrigger>
@@ -296,14 +348,19 @@ export default function CosechasPage() {
 
             <div className="space-y-2">
               <Label htmlFor="rendimiento">Rendimiento (kg/ha)</Label>
-              <Input id="rendimiento" type="number" step="0.01" {...register("rendimiento", { valueAsNumber: true })} />
+              <Input 
+                id="rendimiento" 
+                type="number" 
+                step="0.01" 
+                {...register("rendimiento", { valueAsNumber: true })} 
+              />
             </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || !parcelaId}>
                 {isSubmitting ? "Guardando..." : "Guardar"}
               </Button>
             </DialogFooter>

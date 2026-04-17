@@ -34,7 +34,7 @@ import { entradaService, socioService, siloService } from "@/services/api"
 import { useToast } from "@/hooks/useToast"
 import { createEntradaSchema, type CreateEntradaFormData } from "@/schemas"
 import { formatDate, formatNumber } from "@/lib/utils"
-import { Plus, Search, Scale, Thermometer, Droplets } from "lucide-react"
+import { Plus, Search, Scale, Thermometer, Droplets, Edit, Trash2 } from "lucide-react"
 import type { EntradaAlmacen, Socio, Silo } from "@/types"
 
 export default function EntradasPage() {
@@ -44,12 +44,16 @@ export default function EntradasPage() {
   const [silos, setSilos] = useState<Silo[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingEntrada, setEditingEntrada] = useState<EntradaAlmacen | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedSocioId, setSelectedSocioId] = useState("")
+  const [selectedSiloId, setSelectedSiloId] = useState("")
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CreateEntradaFormData>({
     resolver: zodResolver(createEntradaSchema),
@@ -66,10 +70,11 @@ export default function EntradasPage() {
         socioService.getAll(),
         siloService.getAll(),
       ])
-      setEntradas(entradasRes.data as unknown as EntradaAlmacen[])
-      setSocios(sociosRes.data as unknown as Socio[])
+      setEntradas(entradasRes.data)
+      setSocios(sociosRes.data)
       setSilos(silosRes.data)
-    } catch {
+    } catch (error) {
+      console.error("Error fetching data:", error)
       toast({ title: "Error al cargar datos", type: "error" })
     } finally {
       setIsLoading(false)
@@ -77,14 +82,62 @@ export default function EntradasPage() {
   }
 
   const onSubmit = async (data: CreateEntradaFormData) => {
+    console.log("onSubmit called with:", data, selectedSocioId)
     try {
-      await entradaService.create(data)
-      toast({ title: "Entrada registrada correctamente", type: "success" })
+      if (!selectedSocioId) {
+        toast({ title: "Seleccione un socio", type: "warning" })
+        return
+      }
+      const payload = {
+        socioId: selectedSocioId,
+        siloId: selectedSiloId || undefined,
+        peso: Number(data.peso),
+        humedad: Number(data.humedad),
+        pesoEspecifico: Number(data.pesoEspecifico),
+        temperatura: Number(data.temperatura),
+        impurezas: Number(data.impurezas),
+      }
+
+      if (editingEntrada) {
+        await entradaService.update(editingEntrada.id, payload)
+        toast({ title: "Entrada actualizada", type: "success" })
+      } else {
+        await entradaService.create(payload)
+        toast({ title: "Entrada registrada correctamente", type: "success" })
+      }
       setIsDialogOpen(false)
       reset()
+      setSelectedSocioId("")
+      setSelectedSiloId("")
+      setEditingEntrada(null)
       fetchData()
-    } catch {
+    } catch (error) {
+      console.error("Error saving entrada:", error)
       toast({ title: "Error al guardar", type: "error" })
+    }
+  }
+
+  const handleEdit = (entrada: EntradaAlmacen) => {
+    setEditingEntrada(entrada)
+    setSelectedSocioId(entrada.socioId)
+    setSelectedSiloId(entrada.siloId || "")
+    setValue("peso", entrada.peso)
+    setValue("humedad", entrada.humedad)
+    setValue("pesoEspecifico", entrada.pesoEspecifico)
+    setValue("temperatura", entrada.temperatura)
+    setValue("impurezas", entrada.impurezas)
+    setIsDialogOpen(true)
+  }
+
+  const handleDelete = async (entrada: EntradaAlmacen) => {
+    if (!confirm(`¿Eliminar la entrada de ${entrada.socio?.nombre}?`)) return
+    try {
+      await entradaService.delete(entrada.id)
+      toast({ title: "Entrada eliminada", type: "success" })
+      fetchData()
+    } catch (error) {
+      console.error("Error deleting entrada:", error)
+      toast({ title: "No se puede eliminar", type: "error" })
     }
   }
 
@@ -113,7 +166,13 @@ export default function EntradasPage() {
               className="pl-9"
             />
           </div>
-          <Button onClick={() => { reset(); setIsDialogOpen(true) }}>
+          <Button onClick={() => { 
+            reset()
+            setSelectedSocioId("")
+            setSelectedSiloId("")
+            setEditingEntrada(null)
+            setIsDialogOpen(true) 
+          }}>
             <Plus className="h-4 w-4 mr-2" />
             Nueva Entrada
           </Button>
@@ -198,12 +257,13 @@ export default function EntradasPage() {
                     <TableHead>Temperatura</TableHead>
                     <TableHead>Impurezas %</TableHead>
                     <TableHead>Silo</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredEntradas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         No hay entradas registradas
                       </TableCell>
                     </TableRow>
@@ -233,6 +293,21 @@ export default function EntradasPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>{entrada.silo?.nombre || "-"}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(entrada)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => handleDelete(entrada)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -246,13 +321,21 @@ export default function EntradasPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Registro de Entrada en Almacén</DialogTitle>
+            <DialogTitle>
+              {editingEntrada ? "Editar Entrada" : "Registro de Entrada en Almacén"}
+            </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit((data) => {
+              console.log("Entradas - Form submitted:", data, "socio:", selectedSocioId, "silo:", selectedSiloId)
+              onSubmit(data)
+            })} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Socio *</Label>
-                <Select onValueChange={(v) => reset({ ...reset, socioId: v })}>
+                <Select 
+                  value={selectedSocioId} 
+                  onValueChange={(v) => setSelectedSocioId(v)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar socio" />
                   </SelectTrigger>
@@ -348,11 +431,15 @@ export default function EntradasPage() {
 
               <div className="space-y-2">
                 <Label>Silo</Label>
-                <Select>
+                <Select 
+                  value={selectedSiloId} 
+                  onValueChange={(v) => setSelectedSiloId(v)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar silo (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="">Sin asignar</SelectItem>
                     {silos.map((silo) => (
                       <SelectItem key={silo.id} value={silo.id}>
                         {silo.nombre} ({silo.stockActual.toFixed(0)} / {silo.capacidad} kg)
@@ -367,8 +454,8 @@ export default function EntradasPage() {
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Guardando..." : "Registrar Entrada"}
+              <Button type="submit" disabled={isSubmitting || !selectedSocioId}>
+                {isSubmitting ? "Guardando..." : editingEntrada ? "Actualizar" : "Registrar Entrada"}
               </Button>
             </DialogFooter>
           </form>

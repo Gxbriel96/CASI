@@ -13,7 +13,6 @@ export const createSocioSchema = z.object({
 })
 
 export const createParcelaSchema = z.object({
-  socioId: z.string().uuid("ID de socio inválido"),
   nombre: z.string().min(1, "Nombre requerido"),
   hectareas: z.number().positive("Hectáreas debe ser positivo"),
   ubicacion: z.string().optional(),
@@ -21,17 +20,13 @@ export const createParcelaSchema = z.object({
 })
 
 export const createCosechaSchema = z.object({
-  parcelaId: z.string().uuid("ID de parcela inválido"),
   cultivo: z.enum(["MAIZ", "TRIGO", "CEBADA"]),
   rendimiento: z.number().optional(),
-  fechaSiembra: z.string().datetime().optional(),
-  fechaCosecha: z.string().datetime().optional(),
+  fechaSiembra: z.string().optional(),
+  fechaCosecha: z.string().optional(),
 })
 
 export const createEntradaSchema = z.object({
-  socioId: z.string().uuid("ID de socio inválido"),
-  cosechaId: z.string().uuid("ID de cosecha inválido").optional(),
-  siloId: z.string().uuid("ID de silo inválido").optional(),
   peso: z.number().positive("Peso debe ser positivo").max(50000, "Peso máximo 50,000 kg"),
   humedad: z.number().min(0, "Mínimo 0%").max(100, "Máximo 100%"),
   pesoEspecifico: z.number().positive("Peso específico debe ser positivo").min(0.5).max(1.5),
@@ -40,7 +35,6 @@ export const createEntradaSchema = z.object({
 })
 
 export const createFrutaSchema = z.object({
-  socioId: z.string().uuid("ID de socio inválido"),
   especie: z.enum(["MELOCOTON", "NECTARINA", "ALBARICOQUE", "CIRUELA"]),
   variedad: z.string().optional(),
   calibre: z.enum(["AA", "A", "B", "C"]),

@@ -116,10 +116,17 @@ export const socioService = {
 }
 
 export const parcelaService = {
-  getBySocio: (socioId: string) =>
-    apiClient.get<{ data: import("@/types").Parcela[] }>(`/socios/${socioId}/parcelas`),
-  create: (socioId: string, data: Partial<import("@/types").Parcela>) =>
-    apiClient.post<{ data: import("@/types").Parcela }>(`/socios/${socioId}/parcelas`, data),
+  getAll: (params?: { socioId?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.socioId) searchParams.set("socioId", params.socioId)
+    return apiClient.get<{ data: import("@/types").Parcela[] }>(`/parcelas?${searchParams}`)
+  },
+  getById: (id: string) => apiClient.get<{ data: import("@/types").Parcela }>(`/parcelas/${id}`),
+  create: (data: { socioId: string; nombre: string; hectareas: number; ubicacion?: string; coordenadas?: string }) =>
+    apiClient.post<{ data: import("@/types").Parcela }>("/parcelas", data),
+  update: (id: string, data: Partial<import("@/types").Parcela>) =>
+    apiClient.put<{ data: import("@/types").Parcela }>(`/parcelas/${id}`, data),
+  delete: (id: string) => apiClient.delete<{ data: null }>(`/parcelas/${id}`),
 }
 
 export const cosechaService = {
@@ -128,13 +135,14 @@ export const cosechaService = {
     if (params?.page) searchParams.set("page", String(params.page))
     if (params?.limit) searchParams.set("limit", String(params.limit))
     if (params?.parcelaId) searchParams.set("parcelaId", params.parcelaId)
-    return apiClient.get<{ data: unknown[]; pagination: unknown }>(`/cosechas?${searchParams}`)
+    return apiClient.get<{ data: import("@/types").Cosecha[]; pagination: { total: number; pages: number } }>(`/cosechas?${searchParams}`)
   },
   getById: (id: string) => apiClient.get<{ data: import("@/types").Cosecha }>(`/cosechas/${id}`),
-  create: (data: Partial<import("@/types").Cosecha>) =>
+  create: (data: { parcelaId: string; cultivo: "MAIZ" | "TRIGO" | "CEBADA"; rendimiento?: number; fechaSiembra?: string; fechaCosecha?: string }) =>
     apiClient.post<{ data: import("@/types").Cosecha }>("/cosechas", data),
   update: (id: string, data: Partial<import("@/types").Cosecha>) =>
     apiClient.put<{ data: import("@/types").Cosecha }>(`/cosechas/${id}`, data),
+  delete: (id: string) => apiClient.delete<{ data: null }>(`/cosechas/${id}`),
 }
 
 export const entradaService = {
@@ -144,10 +152,10 @@ export const entradaService = {
     if (params?.limit) searchParams.set("limit", String(params.limit))
     if (params?.socioId) searchParams.set("socioId", params.socioId)
     if (params?.siloId) searchParams.set("siloId", params.siloId)
-    return apiClient.get<{ data: unknown[]; pagination: unknown }>(`/entradas?${searchParams}`)
+    return apiClient.get<{ data: import("@/types").EntradaAlmacen[]; pagination: { total: number; pages: number } }>(`/entradas?${searchParams}`)
   },
   getById: (id: string) => apiClient.get<{ data: import("@/types").EntradaAlmacen }>(`/entradas/${id}`),
-  create: (data: Partial<import("@/types").EntradaAlmacen>) =>
+  create: (data: { socioId: string; siloId?: string; peso: number; humedad: number; pesoEspecifico: number; temperatura: number; impurezas: number }) =>
     apiClient.post<{ data: import("@/types").EntradaAlmacen }>("/entradas", data),
   update: (id: string, data: Partial<import("@/types").EntradaAlmacen>) =>
     apiClient.put<{ data: import("@/types").EntradaAlmacen }>(`/entradas/${id}`, data),
@@ -160,7 +168,7 @@ export const liquidacionService = {
     if (params?.page) searchParams.set("page", String(params.page))
     if (params?.limit) searchParams.set("limit", String(params.limit))
     if (params?.socioId) searchParams.set("socioId", params.socioId)
-    return apiClient.get<{ data: unknown[]; pagination: unknown }>(`/liquidaciones?${searchParams}`)
+    return apiClient.get<{ data: import("@/types").Liquidacion[]; pagination: { total: number; pages: number } }>(`/liquidaciones?${searchParams}`)
   },
   getById: (id: string) => apiClient.get<{ data: import("@/types").Liquidacion }>(`/liquidaciones/${id}`),
   calcular: (socioId: string, cosechaId?: string) =>
@@ -170,15 +178,17 @@ export const liquidacionService = {
     }),
   create: (data: Partial<import("@/types").Liquidacion>) =>
     apiClient.post<{ data: import("@/types").Liquidacion }>("/liquidaciones", data),
+  delete: (id: string) => apiClient.delete<{ data: null }>(`/liquidaciones/${id}`),
 }
 
 export const siloService = {
   getAll: () => apiClient.get<{ data: import("@/types").Silo[] }>("/silos"),
   getById: (id: string) => apiClient.get<{ data: import("@/types").Silo }>(`/silos/${id}`),
-  create: (data: Partial<import("@/types").Silo>) =>
+  create: (data: { nombre: string; capacidad: number; cultivo?: "MAIZ" | "TRIGO" | "CEBADA" }) =>
     apiClient.post<{ data: import("@/types").Silo }>("/silos", data),
   update: (id: string, data: Partial<import("@/types").Silo>) =>
     apiClient.put<{ data: import("@/types").Silo }>(`/silos/${id}`, data),
+  delete: (id: string) => apiClient.delete<{ data: null }>(`/silos/${id}`),
 }
 
 export const frutaService = {
@@ -187,8 +197,10 @@ export const frutaService = {
     if (params?.page) searchParams.set("page", String(params.page))
     if (params?.limit) searchParams.set("limit", String(params.limit))
     if (params?.search) searchParams.set("search", params.search)
-    return apiClient.get<{ data: unknown[]; pagination: unknown }>(`/frutas?${searchParams}`)
+    if (params?.especie) searchParams.set("especie", params.especie)
+    return apiClient.get<{ data: import("@/types").FrutaControl[]; pagination: { total: number; pages: number } }>(`/frutas?${searchParams}`)
   },
-  create: (data: Partial<import("@/types").FrutaControl>) =>
+  create: (data: { socioId: string; especie: "MELOCOTON" | "NECTARINA" | "ALBARICOQUE" | "CIRUELA"; variedad?: string; calibre: "AA" | "A" | "B" | "C"; azucar: number; dureza: number; defectos: number; observaciones?: string }) =>
     apiClient.post<{ data: import("@/types").FrutaControl }>("/frutas", data),
+  delete: (id: string) => apiClient.delete<{ data: null }>(`/frutas/${id}`),
 }

@@ -59,9 +59,10 @@ export default function LiquidacionesPage() {
         liquidacionService.getAll(),
         socioService.getAll(),
       ])
-      setLiquidaciones(liqRes.data as unknown as Liquidacion[])
-      setSocios(sociosRes.data as unknown as Socio[])
-    } catch {
+      setLiquidaciones(liqRes.data)
+      setSocios(sociosRes.data)
+    } catch (error) {
+      console.error("Error fetching data:", error)
       toast({ title: "Error al cargar datos", type: "error" })
     } finally {
       setIsLoading(false)
@@ -77,7 +78,8 @@ export default function LiquidacionesPage() {
     try {
       const result = await liquidacionService.calcular(selectedSocioId)
       setCalculationResult(result.data as unknown as typeof calculationResult)
-    } catch {
+    } catch (error) {
+      console.error("Error calculating:", error)
       toast({ title: "No hay entradas para liquidar", type: "error" })
       setCalculationResult(null)
     } finally {

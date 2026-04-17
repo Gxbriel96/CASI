@@ -54,8 +54,9 @@ export default function SociosPage() {
   const fetchSocios = async () => {
     try {
       const response = await socioService.getAll()
-      setSocios(response.data as unknown as Socio[])
-    } catch {
+      setSocios(response.data)
+    } catch (error) {
+      console.error("Error fetching socios:", error)
       toast({ title: "Error al cargar socios", type: "error" })
     } finally {
       setIsLoading(false)
@@ -227,7 +228,10 @@ export default function SociosPage() {
               {editingSocio ? "Editar Socio" : "Nuevo Socio"}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit((data) => {
+              console.log("Socios - Form submitted:", data)
+              onSubmit(data)
+            })} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="nombre">Nombre completo *</Label>
               <Input id="nombre" {...register("nombre")} />

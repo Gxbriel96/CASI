@@ -51,6 +51,7 @@ export default function ParcelasPage() {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CreateParcelaFormData>({
     resolver: zodResolver(createParcelaSchema),
@@ -62,22 +63,14 @@ export default function ParcelasPage() {
 
   const fetchData = async () => {
     try {
-      const [sociosRes] = await Promise.all([
+      const [parcelasRes, sociosRes] = await Promise.all([
+        parcelaService.getAll(),
         socioService.getAll(),
       ])
+      setParcelas(parcelasRes.data)
       setSocios(sociosRes.data as unknown as Socio[])
-      
-      const allParcelas: Parcela[] = []
-      for (const socio of sociosRes.data as unknown as Socio[]) {
-        try {
-          const parcelasRes = await parcelaService.getBySocio(socio.id)
-          allParcelas.push(...(parcelasRes.data))
-        } catch {
-          // skip
-        }
-      }
-      setParcelas(allParcelas)
-    } catch {
+    } catch (error) {
+      console.error("Error fetching data:", error)
       toast({ title: "Error al cargar datos", type: "error" })
     } finally {
       setIsLoading(false)
@@ -85,23 +78,40 @@ export default function ParcelasPage() {
   }
 
   const onSubmit = async (data: CreateParcelaFormData) => {
+    console.log("Form data:", data)
+    console.log("Selected socio:", selectedSocioId)
     try {
       if (editingParcela) {
-        toast({ title: "Parcela actualizada", type: "success" })
-      } else {
-        await parcelaService.create(data.socioId, {
+        await parcelaService.update(editingParcela.id, {
           nombre: data.nombre,
           hectareas: data.hectareas,
           ubicacion: data.ubicacion,
           coordenadas: data.coordenadas,
         })
+        toast({ title: "Parcela actualizada", type: "success" })
+      } else {
+        if (!selectedSocioId) {
+          toast({ title: "Seleccione un socio", type: "warning" })
+          return
+        }
+        const payload = {
+          socioId: selectedSocioId,
+          nombre: data.nombre,
+          hectareas: Number(data.hectareas),
+          ubicacion: data.ubicacion || undefined,
+          coordenadas: data.coordenadas || undefined,
+        }
+        console.log("Creating parcela with payload:", payload)
+        await parcelaService.create(payload)
         toast({ title: "Parcela creada", type: "success" })
       }
       setIsDialogOpen(false)
       reset()
+      setSelectedSocioId("")
       setEditingParcela(null)
       fetchData()
-    } catch {
+    } catch (error) {
+      console.error("Error saving parcela:", error)
       toast({ title: "Error al guardar", type: "error" })
     }
   }
@@ -109,14 +119,29 @@ export default function ParcelasPage() {
   const handleEdit = (parcela: Parcela) => {
     setEditingParcela(parcela)
     setSelectedSocioId(parcela.socioId)
-    reset({
-      socioId: parcela.socioId,
-      nombre: parcela.nombre,
-      hectareas: parcela.hectareas,
-      ubicacion: parcela.ubicacion || "",
-      coordenadas: parcela.coordenadas || "",
-    })
+    setValue("socioId", parcela.socioId)
+    setValue("nombre", parcela.nombre)
+    setValue("hectareas", parcela.hectareas)
+    setValue("ubicacion", parcela.ubicacion || "")
+    setValue("coordenadas", parcela.coordenadas || "")
     setIsDialogOpen(true)
+  }
+
+  const handleDelete = async (parcela: Parcela) => {
+    if (!confirm(`¿Eliminar la parcela "${parcela.nombre}"?`)) return
+    try {
+      await parcelaService.delete(parcela.id)
+      toast({ title: "Parcela eliminada", type: "success" })
+      fetchData()
+    } catch (error) {
+      console.error("Error deleting parcela:", error)
+      toast({ title: "No se puede eliminar", type: "error" })
+    }
+  }
+
+  const getSocioNombre = (socioId: string) => {
+    const socio = socios.find(s => s.id === socioId)
+    return socio ? `${socio.numeroSocio} - ${socio.nombre}` : socioId.slice(0, 8)
   }
 
   const filteredParcelas = parcelas.filter(
@@ -145,6 +170,7 @@ export default function ParcelasPage() {
           <Button
             onClick={() => {
               setEditingParcela(null)
+              setSelectedSocioId("")
               reset()
               setIsDialogOpen(true)
             }}
@@ -226,7 +252,7 @@ export default function ParcelasPage() {
                       <TableRow key={parcela.id}>
                         <TableCell className="font-medium">{parcela.nombre}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary">{parcela.socioId?.slice(0, 8)}...</Badge>
+                          <Badge variant="secondary">{getSocioNombre(parcela.socioId)}</Badge>
                         </TableCell>
                         <TableCell className="font-mono">
                           {formatNumber(parcela.hectareas)} ha
@@ -248,6 +274,7 @@ export default function ParcelasPage() {
                               variant="ghost"
                               size="icon"
                               className="text-destructive hover:text-destructive"
+                              onClick={() => handleDelete(parcela)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -270,25 +297,30 @@ export default function ParcelasPage() {
               {editingParcela ? "Editar Parcela" : "Nueva Parcela"}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Socio Propietario *</Label>
-              <Select 
-                value={selectedSocioId} 
-                onValueChange={(v) => setSelectedSocioId(v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar socio" />
-                </SelectTrigger>
-                <SelectContent>
-                  {socios.map((socio) => (
-                    <SelectItem key={socio.id} value={socio.id}>
-                      {socio.numeroSocio} - {socio.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <form onSubmit={handleSubmit((data) => {
+              console.log("Form submitted!", data, "socio:", selectedSocioId)
+              onSubmit(data)
+            })} className="space-y-4">
+            {!editingParcela && (
+              <div className="space-y-2">
+                <Label>Socio Propietario *</Label>
+                <Select 
+                  value={selectedSocioId} 
+                  onValueChange={(v) => setSelectedSocioId(v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar socio" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {socios.map((socio) => (
+                      <SelectItem key={socio.id} value={socio.id}>
+                        {socio.numeroSocio} - {socio.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="nombre">Nombre de la Parcela *</Label>
@@ -330,7 +362,7 @@ export default function ParcelasPage() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmitting || !selectedSocioId}>
+              <Button type="submit" disabled={isSubmitting || (!editingParcela && !selectedSocioId)}>
                 {isSubmitting ? "Guardando..." : "Guardar"}
               </Button>
             </DialogFooter>
