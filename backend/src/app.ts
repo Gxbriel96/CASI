@@ -8,7 +8,14 @@ import { errorHandler } from "./middleware/error-handler";
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: process.env.ALLOWED_ORIGINS?.split(",") || "*" }));
+const allowedOrigins = process.env.NODE_ENV === "production"
+  ? [process.env.FRONTEND_URL || "https://casi-frontend.vercel.app"]
+  : ["http://localhost:5173", "http://localhost:3000", "*"];
+
+app.use(cors({ 
+  origin: allowedOrigins,
+  credentials: true 
+}));
 app.use(compression());
 
 app.use(express.json({ limit: "10mb" }));
