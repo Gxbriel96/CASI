@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
-import { apiClient, authService } from "@/services/api"
+import { apiClient } from "@/lib/api-client"
 import type { Usuario } from "@/types"
 
 interface AuthContextType {
@@ -17,12 +17,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const token = apiClient.getToken()
+    const token = localStorage.getItem("token")
     if (token) {
-      authService.me()
-        .then((res) => setUser(res.data as Usuario))
+      apiClient.get<{ data: Usuario }>("/auth/me")
+        .then((res) => setUser(res.data))
         .catch(() => {
-          apiClient.setToken(null)
+          localStorage.removeItem("token")
         })
         .finally(() => setIsLoading(false))
     } else {
@@ -31,13 +31,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = async (email: string, password: string) => {
-    const response = await authService.login(email, password)
-    apiClient.setToken(response.data.token)
-    setUser(response.data.user as Usuario)
+    const response = await apiClient.post<{ data: { token: string; refreshToken: string; user: Usuario } }>("/auth/login", { email, password })
+    localStorage.setItem("token", response.data.token)
+    localStorage.setItem("refreshToken", response.data.refreshToken)
+    setUser(response.data.user)
   }
 
   const logout = () => {
-    authService.logout()
+    localStorage.removeItem("token")
     setUser(null)
   }
 

@@ -206,16 +206,22 @@ cp .env.example .env
 # Editar .env con tus configuraciones
 
 # Opción 1: Docker (recomendado)
-docker compose up -d
+docker run -d -p 5435:5432 -e POSTGRES_USER=casi_user -e POSTGRES_PASSWORD=casi_pass -e POSTGRES_DB=casi --name casi-db postgres:15
 
 # Opción 2: PostgreSQL local
 # Crear base de datos "casi" y configurar .env
 
-# Ejecutar migraciones
-npx prisma migrate dev --name init
-
 # Generar cliente Prisma
 npx prisma generate
+
+# Ejecutar migraciones (crear tablas)
+npx prisma migrate dev --name init
+
+# Poblar datos iniciales (usuario admin, silos, campaña)
+npm run db:seed
+
+# Iniciar servidor
+npm run dev
 
 # Ejecutar tests
 npm test
@@ -242,7 +248,19 @@ ALLOWED_ORIGINS=http://localhost:5173
 | `npm run build` | Compilar TypeScript |
 | `npm start` | Iniciar servidor en producción |
 | `npm test` | Ejecutar tests |
+| `npm run db:seed` | Poblar datos iniciales |
+| `npm run db:reset` | Reiniciar base de datos (migrate + seed) |
 | `npx prisma studio` | Abrir gestor de base de datos |
+
+### Datos del Seed
+
+Al ejecutar `npm run db:seed` se crean automáticamente:
+
+| Entidad | Datos |
+|---------|-------|
+| **Usuario Admin** | email: admin@casi.es, password: admin123, rol: ADMIN |
+| **Silos** | Silo Norte (50,000kg, maíz), Silo Sur (40,000kg, trigo), Silo Central (30,000kg, cebada) |
+| **Campaña 2024** | maíz: 0.35€/kg, trigo: 0.40€/kg, apoyo: 12% |
 
 ## Decisiones Técnicas
 
@@ -263,6 +281,18 @@ Separación en capas (controllers → services → repositories) permite:
 - Testabilidad: Servicios sin зависимости de HTTP
 - Mantenimiento: Lógica de negocio isolada
 - Escalabilidad: Fácil agregar nuevos módulos
+
+## Usuario de Prueba
+
+El sistema crea automáticamente un usuario administrador al ejecutar el seed:
+
+| Campo | Valor |
+|-------|-------|
+| **Email** | admin@casi.es |
+| **Contraseña** | admin123 |
+| **Rol** | ADMIN |
+
+Para crear el usuario, ejecutar: `npm run db:seed`
 
 ## Licencia
 
