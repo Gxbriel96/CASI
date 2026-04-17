@@ -13,7 +13,11 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
   },
-  "keywords": ["agricultura", "cooperativa", "casi"],
+  "keywords": [
+    "agricultura",
+    "cooperativa",
+    "casi"
+  ],
   "author": "CASI",
   "license": "MIT",
   "dependencies": {

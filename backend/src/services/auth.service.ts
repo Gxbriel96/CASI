@@ -28,13 +28,13 @@ export class AuthService {
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET!, {
-      expiresIn: process.env.JWT_EXPIRES_IN || "15m",
+      expiresIn: "15m",
     });
 
     const refreshToken = jwt.sign(
       { userId: usuario.id },
       process.env.JWT_REFRESH_SECRET!,
-      { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d" }
+      { expiresIn: "7d" }
     );
 
     return {
@@ -71,7 +71,7 @@ export class AuthService {
       const newToken = jwt.sign(
         { userId: usuario.id, email: usuario.email, rol: usuario.rol },
         process.env.JWT_SECRET!,
-        { expiresIn: process.env.JWT_EXPIRES_IN || "15m" }
+        { expiresIn: "15m" }
       );
 
       return { token: newToken };
@@ -117,7 +117,6 @@ export class AuthService {
       data: {
         email,
         password: hashedPassword,
-        nombre,
         rol,
         ...(socioId && { socioId }),
       },

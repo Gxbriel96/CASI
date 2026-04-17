@@ -1,9 +1,10 @@
 import prisma from "../config/database";
 import { NotFoundError, ConflictError, ValidationError } from "../utils/errors";
+import { Prisma } from "@prisma/client";
 
 export class SocioService {
   async findAll(page: number = 1, limit: number = 10, search?: string) {
-    const where = search
+    const where: Prisma.SocioWhereInput = search
       ? {
           OR: [
             { nombre: { contains: search, mode: "insensitive" } },

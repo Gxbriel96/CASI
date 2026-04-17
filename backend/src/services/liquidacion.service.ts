@@ -139,7 +139,7 @@ export class LiquidacionService {
   }
 
   async getEstadisticas() {
-    const [{ totalLiquidaciones, importeTotal }, porSocio, porMes] = await Promise.all([
+    const [aggregated, porSocio, porMes] = await Promise.all([
       prisma.liquidacion.aggregate({
         _sum: { importeTotal: true, totalKilos: true, apoyoGobierno: true },
         _count: true,
@@ -162,10 +162,10 @@ export class LiquidacionService {
     ]);
 
     return {
-      totalLiquidaciones: totalLiquidaciones._count,
-      importeTotal: totalLiquidaciones._sum.importeTotal || 0,
-      totalKilos: totalLiquidaciones._sum.totalKilos || 0,
-      apoyoGobierno: totalLiquidaciones._sum.apoyoGobierno || 0,
+      totalLiquidaciones: aggregated._count,
+      importeTotal: aggregated._sum.importeTotal || 0,
+      totalKilos: aggregated._sum.totalKilos || 0,
+      apoyoGobierno: aggregated._sum.apoyoGobierno || 0,
       topSocios: porSocio.map((s) => ({
         socioId: s.socioId,
         importeTotal: s._sum.importeTotal || 0,

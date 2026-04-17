@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom"
 import { AuthProvider, useAuth } from "@/hooks/useAuth"
+import { QueryProvider } from "@/components/providers/QueryProvider"
 import { MainLayout } from "@/components/layout/MainLayout"
 import { Toaster } from "@/components/ui/toaster"
 import LoginPage from "@/pages/Login"
@@ -70,8 +71,10 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
+    <QueryProvider>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </QueryProvider>
   )
 }
