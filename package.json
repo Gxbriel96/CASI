@@ -1,6 +1,7 @@
 {
   "devDependencies": {
     "@playwright/test": "^1.59.1",
-    "playwright": "^1.59.1"
+    "playwright": "^1.59.1",
+    "tsc-alias": "^1.8.16"
   }
 }
