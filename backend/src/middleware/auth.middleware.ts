@@ -2,8 +2,6 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { UnauthorizedError } from "../utils/errors";
 
-const JWT_SECRET = process.env.JWT_SECRET || "default-secret";
-
 export interface JWTPayload {
   userId: string;
   email: string;
@@ -31,7 +29,7 @@ export const authenticate = async (
       throw new UnauthorizedError("No token provided");
     }
 
-    const payload = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const payload = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
 
     req.user = payload;
     next();

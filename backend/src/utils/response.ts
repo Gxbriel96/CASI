@@ -14,15 +14,12 @@ export class ApiResponse {
     });
   }
 
-  static error(res: Response, message: string, statusCode = 500, errors?: Record<string, unknown>) {
-    const response: { status: string; message: string; errors?: Record<string, unknown> } = {
+  static error(res: Response, message: string, statusCode = 500, errors?: unknown) {
+    return res.status(statusCode).json({
       status: "error",
       message,
-    };
-    if (errors) {
-      response.errors = errors;
-    }
-    return res.status(statusCode).json(response);
+      ...(errors && { errors }),
+    });
   }
 
   static paginated<T>(

@@ -1,10 +1,7 @@
-import jwt, { Secret, SignOptions } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import prisma from "../config/database";
 import { UnauthorizedError, NotFoundError } from "../utils/errors";
-
-const JWT_SECRET: Secret = process.env.JWT_SECRET || "default-secret";
-const JWT_REFRESH_SECRET: Secret = process.env.JWT_REFRESH_SECRET || "default-refresh-secret";
 
 export class AuthService {
   async login(email: string, password: string) {
@@ -30,14 +27,14 @@ export class AuthService {
       socioId: usuario.socioId,
     };
 
-    const signOptions: SignOptions = { expiresIn: "15m" };
-    const token = jwt.sign(payload, JWT_SECRET, signOptions);
+    const token = jwt.sign(payload, process.env.JWT_SECRET!, {
+      expiresIn: process.env.JWT_EXPIRES_IN || "15m",
+    });
 
-    const refreshOptions: SignOptions = { expiresIn: "7d" };
     const refreshToken = jwt.sign(
       { userId: usuario.id },
-      JWT_REFRESH_SECRET,
-      refreshOptions
+      process.env.JWT_REFRESH_SECRET!,
+      { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d" }
     );
 
     return {
@@ -60,7 +57,7 @@ export class AuthService {
     try {
       const payload = jwt.verify(
         refreshToken,
-        JWT_REFRESH_SECRET
+        process.env.JWT_REFRESH_SECRET!
       ) as { userId: string };
 
       const usuario = await prisma.usuario.findUnique({
@@ -71,11 +68,10 @@ export class AuthService {
         throw new UnauthorizedError("Usuario no encontrado");
       }
 
-      const signOptions: SignOptions = { expiresIn: "15m" };
       const newToken = jwt.sign(
         { userId: usuario.id, email: usuario.email, rol: usuario.rol },
-        JWT_SECRET,
-        signOptions
+        process.env.JWT_SECRET!,
+        { expiresIn: process.env.JWT_EXPIRES_IN || "15m" }
       );
 
       return { token: newToken };
