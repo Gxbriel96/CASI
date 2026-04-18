@@ -46,7 +46,7 @@ export default function CosechasPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCosecha, setEditingCosecha] = useState<Cosecha | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  // selectedSocioId se usa para filtrar parcelas en el formulario
+  const [selectedSocioId, setSelectedSocioId] = useState<string>("")
 
   const {
     register,
