@@ -36,3 +36,4 @@ backend/node_modules/.prisma/
 
 # Vite
 frontend/node_modules/.vite/
+.vercel
