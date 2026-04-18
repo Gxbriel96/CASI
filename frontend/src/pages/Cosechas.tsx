@@ -46,7 +46,7 @@ export default function CosechasPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCosecha, setEditingCosecha] = useState<Cosecha | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedSocioId, setSelectedSocioId] = useState<string>("")
+  // selectedSocioId se usa para filtrar parcelas en el formulario
 
   const {
     register,
@@ -72,12 +72,13 @@ export default function CosechasPage() {
         parcelaService.getAll(),
         socioService.getAll(),
       ])
-      setCosechas(cosechasRes.data)
-      setParcelas(parcelasRes.data)
-      setSocios(sociosRes.data)
+      setCosechas(cosechasRes.data as Cosecha[])
+      setParcelas(parcelasRes.data as Parcela[])
+      setSocios(sociosRes.data as Socio[])
       
-      if (parcelasRes.data.length > 0) {
-        setSelectedSocioId(parcelasRes.data[0].socioId)
+      const parcelasData = parcelasRes.data as Parcela[]
+      if (parcelasData.length > 0) {
+        setSelectedSocioId(parcelasData[0].socioId)
       }
     } catch (error) {
       console.error("Error fetching data:", error)

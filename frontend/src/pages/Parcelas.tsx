@@ -67,8 +67,8 @@ export default function ParcelasPage() {
         parcelaService.getAll(),
         socioService.getAll(),
       ])
-      setParcelas(parcelasRes.data)
-      setSocios(sociosRes.data as unknown as Socio[])
+      setParcelas(parcelasRes.data as Parcela[])
+      setSocios(sociosRes.data as Socio[])
     } catch (error) {
       console.error("Error fetching data:", error)
       toast({ title: "Error al cargar datos", type: "error" })
@@ -119,7 +119,6 @@ export default function ParcelasPage() {
   const handleEdit = (parcela: Parcela) => {
     setEditingParcela(parcela)
     setSelectedSocioId(parcela.socioId)
-    setValue("socioId", parcela.socioId)
     setValue("nombre", parcela.nombre)
     setValue("hectareas", parcela.hectareas)
     setValue("ubicacion", parcela.ubicacion || "")

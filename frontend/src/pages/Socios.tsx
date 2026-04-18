@@ -54,7 +54,7 @@ export default function SociosPage() {
   const fetchSocios = async () => {
     try {
       const response = await socioService.getAll()
-      setSocios(response.data)
+      setSocios(response.data as Socio[])
     } catch (error) {
       console.error("Error fetching socios:", error)
       toast({ title: "Error al cargar socios", type: "error" })

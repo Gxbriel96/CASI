@@ -70,9 +70,9 @@ export default function EntradasPage() {
         socioService.getAll(),
         siloService.getAll(),
       ])
-      setEntradas(entradasRes.data)
-      setSocios(sociosRes.data)
-      setSilos(silosRes.data)
+      setEntradas(entradasRes.data as EntradaAlmacen[])
+      setSocios(sociosRes.data as Socio[])
+      setSilos(silosRes.data as Silo[])
     } catch (error) {
       console.error("Error fetching data:", error)
       toast({ title: "Error al cargar datos", type: "error" })

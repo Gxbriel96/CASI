@@ -52,6 +52,7 @@ export default function ControlCalidadPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [filterEspecie, setFilterEspecie] = useState<string>("all")
+  const [selectedSocioId, setSelectedSocioId] = useState<string>("")
 
   const {
     register,
@@ -80,8 +81,8 @@ export default function ControlCalidadPage() {
         frutaService.getAll(),
         socioService.getAll(),
       ])
-      setFrutas(frutasRes.data)
-      setSocios(sociosRes.data)
+      setFrutas(frutasRes.data as FrutaControl[])
+      setSocios(sociosRes.data as Socio[])
     } catch (error) {
       console.error("Error fetching data:", error)
       toast({ title: "Error al cargar datos", type: "error" })
@@ -91,14 +92,15 @@ export default function ControlCalidadPage() {
   }
 
   const onSubmit = async (data: CreateFrutaFormData) => {
-    console.log("onSubmit called with:", data, selectedSocioId)
+    console.log("onSubmit called with:", data)
     try {
-      if (!selectedSocioId) {
+      const socioIdValue = (data as unknown as { socioId: string }).socioId
+      if (!socioIdValue) {
         toast({ title: "Seleccione un socio", type: "warning" })
         return
       }
       await frutaService.create({
-        socioId: selectedSocioId,
+        socioId: socioIdValue,
         especie: data.especie,
         variedad: data.variedad || undefined,
         calibre: data.calibre,
@@ -110,7 +112,6 @@ export default function ControlCalidadPage() {
       toast({ title: "Control de calidad registrado", type: "success" })
       setIsDialogOpen(false)
       reset()
-      setSelectedSocioId("")
       fetchData()
     } catch (error) {
       console.error("Error saving:", error)
@@ -296,12 +297,12 @@ export default function ControlCalidadPage() {
             <DialogTitle>Registro de Control APPCC</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit((data) => {
-              console.log("ControlCalidad - Form submitted:", data, "socio:", selectedSocioId)
+              console.log("ControlCalidad - Form submitted:", data)
               onSubmit(data)
             })} className="space-y-4">
             <div className="space-y-2">
               <Label>Socio *</Label>
-              <Select onValueChange={(v) => reset({ socioId: v } as CreateFrutaFormData)}>
+              <Select onValueChange={(v) => setSelectedSocioId(v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar socio" />
                 </SelectTrigger>

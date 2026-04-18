@@ -20,6 +20,7 @@ export const createParcelaSchema = z.object({
 })
 
 export const createCosechaSchema = z.object({
+  parcelaId: z.string().optional(),
   cultivo: z.enum(["MAIZ", "TRIGO", "CEBADA"]),
   rendimiento: z.number().optional(),
   fechaSiembra: z.string().optional(),

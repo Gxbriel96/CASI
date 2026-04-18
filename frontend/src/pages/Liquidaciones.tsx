@@ -59,8 +59,8 @@ export default function LiquidacionesPage() {
         liquidacionService.getAll(),
         socioService.getAll(),
       ])
-      setLiquidaciones(liqRes.data)
-      setSocios(sociosRes.data)
+      setLiquidaciones(liqRes.data as Liquidacion[])
+      setSocios(sociosRes.data as Socio[])
     } catch (error) {
       console.error("Error fetching data:", error)
       toast({ title: "Error al cargar datos", type: "error" })
