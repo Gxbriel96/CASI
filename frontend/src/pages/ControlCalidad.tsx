@@ -52,7 +52,6 @@ export default function ControlCalidadPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [filterEspecie, setFilterEspecie] = useState<string>("all")
-  const [selectedSocioId, setSelectedSocioId] = useState<string>("")
 
   const {
     register,
@@ -94,13 +93,12 @@ export default function ControlCalidadPage() {
   const onSubmit = async (data: CreateFrutaFormData) => {
     console.log("onSubmit called with:", data)
     try {
-      const socioIdValue = (data as unknown as { socioId: string }).socioId
-      if (!socioIdValue) {
+      if (!data.socioId) {
         toast({ title: "Seleccione un socio", type: "warning" })
         return
       }
       await frutaService.create({
-        socioId: socioIdValue,
+        socioId: data.socioId,
         especie: data.especie,
         variedad: data.variedad || undefined,
         calibre: data.calibre,
@@ -302,7 +300,7 @@ export default function ControlCalidadPage() {
             })} className="space-y-4">
             <div className="space-y-2">
               <Label>Socio *</Label>
-              <Select onValueChange={(v) => setSelectedSocioId(v)}>
+              <Select onValueChange={(v) => setValue("socioId", v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar socio" />
                 </SelectTrigger>

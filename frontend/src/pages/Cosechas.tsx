@@ -46,7 +46,6 @@ export default function CosechasPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCosecha, setEditingCosecha] = useState<Cosecha | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedSocioId, setSelectedSocioId] = useState<string>("")
 
   const {
     register,
@@ -75,11 +74,6 @@ export default function CosechasPage() {
       setCosechas(cosechasRes.data as Cosecha[])
       setParcelas(parcelasRes.data as Parcela[])
       setSocios(sociosRes.data as Socio[])
-      
-      const parcelasData = parcelasRes.data as Parcela[]
-      if (parcelasData.length > 0) {
-        setSelectedSocioId(parcelasData[0].socioId)
-      }
     } catch (error) {
       console.error("Error fetching data:", error)
       toast({ title: "Error al cargar datos", type: "error" })

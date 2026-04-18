@@ -36,6 +36,7 @@ export const createEntradaSchema = z.object({
 })
 
 export const createFrutaSchema = z.object({
+  socioId: z.string().min(1, "Socio requerido"),
   especie: z.enum(["MELOCOTON", "NECTARINA", "ALBARICOQUE", "CIRUELA"]),
   variedad: z.string().optional(),
   calibre: z.enum(["AA", "A", "B", "C"]),
