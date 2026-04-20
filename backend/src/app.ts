@@ -8,13 +8,34 @@ import { errorHandler } from "./middleware/error-handler";
 const app = express();
 
 app.use(helmet());
-const allowedOrigins = process.env.NODE_ENV === "production"
-  ? [process.env.FRONTEND_URL || "https://casi-frontend.vercel.app"]
-  : ["http://localhost:5173", "http://localhost:3000", "*"];
 
-app.use(cors({ 
-  origin: allowedOrigins,
-  credentials: true 
+// Configuración CORS
+const allowedOrigins = process.env.NODE_ENV === "production"
+  ? [
+      process.env.FRONTEND_URL,
+      "https://casi-frontend.vercel.app",
+      "https://casi-nevf.vercel.app",
+      "https://casi-nevf.vercel.app/",
+    ].filter(Boolean)
+  : ["http://localhost:5173", "http://localhost:3000"];
+
+console.log("🔒 CORS allowed origins:", allowedOrigins);
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Permitir requests sin origin (Postman, curl, mobile apps)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes("*")) {
+      callback(null, true);
+    } else {
+      console.log("❌ CORS blocked origin:", origin);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
 }));
 app.use(compression());
 
